@@ -1,0 +1,15 @@
+services:
+
+  bot:
+    build:
+      context: ./bot
+    container_name: bot
+    restart: always
+    networks:
+      - realty
+    environment:
+      API_TOKEN: ${API_TOKEN}
+
+networks:
+  realty:
+    name: realty

@@ -1,0 +1,52 @@
+name: Деплой на VPS
+
+on:
+  push:
+    branches:
+      - main
+      
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Получение кода из репозитория
+      uses: actions/checkout@v4
+
+    - name: Настройка SSH-ключа
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_KEY }}
+
+    - name: Добавление VPS в known_hosts
+      run: |
+        ssh-keyscan -H ${{ secrets.PROD_SERVER }} >> ~/.ssh/known_hosts
+
+    - name: Добавление GitHub в known_hosts на сервере
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} 'mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts'
+
+    - name: Проверка существования директории и обновление кода
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} '
+          if [ -d /root/realty ]; then
+            echo "Директория существует, обновляем код";
+            cd /root/realty &&
+            ssh-agent bash -c "ssh-add ~/.ssh/id_rsa_remote && git reset --hard && git pull" &&
+            echo "Код обновлен";
+          else
+            echo "Директория не существует, создаем и клонируем репозиторий";
+            mkdir -p /root/realty &&
+            ssh-agent bash -c "ssh-add ~/.ssh/id_rsa_remote && git clone git@github.com:vektorver/realty.git /root/realty";
+          fi
+        '
+
+        
+    - name: Запуск Docker Compose
+      run: |
+        ssh ${{ secrets.SERVER_USERNAME }}@${{ secrets.PROD_SERVER }} '
+          export API_TOKEN="${{ secrets.API_TOKEN }}" &&
+          cd /root/realty &&
+          docker compose up --build -d
+        '
