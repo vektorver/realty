@@ -44,7 +44,7 @@ def plot_polygon(coords: List[List[Tuple[float, float]]], cadastral_number: str)
     ax.set_xlim(minx - padding_x, maxx + padding_x)
     ax.set_ylim(miny - padding_y, maxy + padding_y)
 
-    ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik)
+    ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron)
     ax.set_title(f"Участок {cadastral_number}")
     ax.set_xlabel("Долгота")
     ax.set_ylabel("Широта")
