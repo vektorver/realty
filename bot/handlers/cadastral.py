@@ -52,9 +52,12 @@ async def fetch_and_send_real_data(message: Message, cadastral_number: str):
             await message.answer(info, parse_mode="Markdown")
 
             if coords:
-                map_file = plot_polygon(coords, cadastral_number)
-                photo = FSInputFile(map_file)
-                await message.answer_photo(photo=photo)
+                try:
+                    map_file = plot_polygon(coords, cadastral_number)
+                    photo = FSInputFile(map_file)
+                    await message.answer_photo(photo=photo)
+                except Exception as e:
+                    await message.answer(f"❌ Ошибка при загрузке карты: {str(e)}")
 
     except Exception as e:
         await message.answer(f"❌ Ошибка при получении данных: {str(e)}")
