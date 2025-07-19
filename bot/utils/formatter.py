@@ -39,9 +39,17 @@ def format_cadastral_info(feat: Any) -> Tuple[str, List[Tuple[float, float]]]:
 
     geometry = getattr(feat, "geometry", None)
     if geometry and geometry.coordinates:
-        coords: List[Tuple[float, float]] = [
-            (pos.longitude, pos.latitude) for pos in geometry.coordinates[0]
-        ]
+        if geometry.type == "MultiPolygon":
+            coords: List[List[Tuple[float, float]]] = [
+                [(pos.longitude, pos.latitude) for pos in polygon[0]]
+                for polygon in geometry.coordinates
+            ]
+        elif geometry.type == "Polygon":
+            coords: List[List[Tuple[float, float]]] = [
+                [(pos.longitude, pos.latitude) for pos in geometry.coordinates[0]]
+            ]
+        else:
+            coords = []
         feat_data["coords"] = coords
     else:
         coords = []

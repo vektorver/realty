@@ -5,25 +5,32 @@ using geopandas, shapely, contextily, and matplotlib.
 
 from typing import List, Tuple
 import geopandas as gpd
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, MultiPolygon
 import contextily as ctx
 import matplotlib.pyplot as plt
 
 
-def plot_polygon(coords: List[Tuple[float, float]], cadastral_number: str) -> str:
+def plot_polygon(coords: List[List[Tuple[float, float]]], cadastral_number: str) -> str:
     """
-    Plot a polygon defined by coordinates on a map with a basemap,
+    Plot one or more polygons defined by coordinates on a map with a basemap,
     save it as a PNG image file named after the cadastral number.
 
     Args:
-        coords (list of tuple): List of (longitude, latitude) pairs defining the polygon vertices.
+        coords (list of list of tuple): List of polygons, 
+        each a list of (longitude, latitude) pairs.
         cadastral_number (str): Identifier to use for the map title and filename.
 
     Returns:
         str: The filename of the saved PNG map image.
     """
-    polygon = Polygon(coords)
-    gdf = gpd.GeoDataFrame(index=[0], crs="EPSG:4326", geometry=[polygon])
+
+    polygons = [Polygon(polygon_coords) for polygon_coords in coords]
+    if len(polygons) == 1:
+        geometry = polygons[0]
+    else:
+        geometry = MultiPolygon(polygons)
+
+    gdf = gpd.GeoDataFrame(index=[0], crs="EPSG:4326", geometry=[geometry])
     gdf = gdf.to_crs(epsg=3857)
 
     fig, ax = plt.subplots(figsize=(8, 8))

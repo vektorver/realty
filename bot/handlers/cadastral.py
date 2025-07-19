@@ -5,7 +5,6 @@ It fetches cadastral data with caching, formats and sends info,
 and plots cadastral polygons on maps with refresh support.
 """
 
-import asyncio
 from datetime import timezone, timedelta
 
 from aiogram.types import (
@@ -42,14 +41,34 @@ async def fetch_and_send_real_data(message: Message, cadastral_number: str):
         with Nspd() as nspd:
             feat = nspd.find(cadastral_number)
 
-            if not feat or (isinstance(feat, dict) and feat.get("code") == 204):
+            if not feat:
                 await message.answer("❌ Объект с таким кадастровым номером не найден.")
+                return
+
+            if isinstance(feat, dict):
+
+                if feat.get("code") == 403:
+                    await message.answer("❌ Доступ к базе НСПД ограничен")
+                elif feat.get("code") == 204:
+                    await message.answer(
+                        "❌ Объект с таким кадастровым номером не найден."
+                    )
+                else:
+                    await message.answer(
+                        f"❌ Непредвиденная ошибка: {feat.get('code')}, {feat.get('message')}"
+                    )
+
                 return
 
             await cache.set(cadastral_number, feat)
 
             info, coords = format_cadastral_info(feat)
-            await message.answer(info, parse_mode="Markdown")
+
+            if len(info) <= 4096:
+                await message.answer(info, parse_mode="Markdown")
+            else:
+                for i in range(0, len(info), 4096):
+                    await message.answer(info[i : i + 4096], parse_mode="Markdown")
 
             if coords:
                 try:
@@ -62,7 +81,6 @@ async def fetch_and_send_real_data(message: Message, cadastral_number: str):
     except Exception as e:
         await message.answer(f"❌ Ошибка при получении данных: {str(e)}")
         return
-
 
 
 @router.callback_query()
