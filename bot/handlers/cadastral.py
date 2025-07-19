@@ -37,29 +37,29 @@ async def fetch_and_send_real_data(message: Message, cadastral_number: str):
         message (Message): Incoming Telegram message to respond to.
         cadastral_number (str): Cadastral number string to search.
     """
-    try:
-        feat = await asyncio.wait_for(
-            asyncio.to_thread(lambda: Nspd().find(cadastral_number)), timeout=20
-        )
-        await cache.set(cadastral_number, feat)
 
-    except asyncio.TimeoutError:
-        await message.answer("⏳ Время ожидания истекло. Попробуйте позже.")
-        return
+    try:
+        with Nspd() as nspd:
+            feat = nspd.find(cadastral_number)
+
+            if not feat or (isinstance(feat, dict) and feat.get("code") == 204):
+                await message.answer("❌ Объект с таким кадастровым номером не найден.")
+                return
+
+            await cache.set(cadastral_number, feat)
+
+            info, coords = format_cadastral_info(feat)
+            await message.answer(info, parse_mode="Markdown")
+
+            if coords:
+                map_file = plot_polygon(coords, cadastral_number)
+                photo = FSInputFile(map_file)
+                await message.answer_photo(photo=photo)
+
     except Exception as e:
         await message.answer(f"❌ Ошибка при получении данных: {str(e)}")
         return
 
-    if feat:
-        info, coords = format_cadastral_info(feat)
-        await message.answer(info, parse_mode="Markdown")
-
-        if coords:
-            map_file = plot_polygon(coords, cadastral_number)
-            photo = FSInputFile(map_file)
-            await message.answer_photo(photo=photo)
-    else:
-        await message.answer("❌ Объект с таким кадастровым номером не найден.")
 
 
 @router.callback_query()
